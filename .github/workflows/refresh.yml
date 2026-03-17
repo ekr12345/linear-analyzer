@@ -11,11 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Write credentials
-        run: echo '{"linearApiKey": "${{ secrets.LINEAR_API_KEY }}"}' > ~/.claude/linear-credentials.json
-        env:
-          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
-
       - name: Install Python
         uses: actions/setup-python@v5
         with:
@@ -24,7 +19,7 @@ jobs:
       - name: Run refresh
         run: |
           mkdir -p ~/.claude
-          echo '{"linearApiKey": "${{ secrets.LINEAR_API_KEY }}"}' > ~/.claude/linear-credentials.json
+          printf '{"linearApiKey": "%s"}' "$LINEAR_API_KEY" > ~/.claude/linear-credentials.json
           python refresh.py --no-open
         env:
           LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
