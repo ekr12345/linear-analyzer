@@ -1,0 +1,38 @@
+name: Refresh Linear Data
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9am UTC
+  workflow_dispatch:       # Allow manual trigger from GitHub
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write credentials
+        run: echo '{"linearApiKey": "${{ secrets.LINEAR_API_KEY }}"}' > ~/.claude/linear-credentials.json
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run refresh
+        run: |
+          mkdir -p ~/.claude
+          echo '{"linearApiKey": "${{ secrets.LINEAR_API_KEY }}"}' > ~/.claude/linear-credentials.json
+          python refresh.py --no-open
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+
+      - name: Commit updated index.html
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || git commit -m "Weekly refresh: $(date +'%b %d, %Y')"
+          git push

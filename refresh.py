@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 CREDENTIALS_FILE = Path.home() / ".claude" / "linear-credentials.json"
-HTML_FILE = Path(__file__).parent / "linear-analyzer.html"
+HTML_FILE = Path(__file__).parent / "index.html"
 
 LABEL_COLORS = {
     "Feature":      "#BB87FC",
@@ -108,7 +108,7 @@ def build_js_array(issues):
     lines.append("]")
     return "\n".join(lines)
 
-def inject_and_open(issues):
+def inject_and_open(issues, no_open=False):
     html = HTML_FILE.read_text()
     fetched = datetime.now().strftime("%b %-d, %Y %-I:%M %p")
 
@@ -129,10 +129,12 @@ def inject_and_open(issues):
     )
 
     HTML_FILE.write_text(html)
-    print(f"Fetched {len(issues)} issues. Opening browser...")
-    subprocess.Popen(["xdg-open", str(HTML_FILE)])
+    print(f"Fetched {len(issues)} issues.")
+    if not no_open:
+        subprocess.Popen(["xdg-open", str(HTML_FILE)])
 
 if __name__ == "__main__":
+    no_open = "--no-open" in sys.argv
     token = get_token()
     issues = fetch_issues(token)
-    inject_and_open(issues)
+    inject_and_open(issues, no_open)
