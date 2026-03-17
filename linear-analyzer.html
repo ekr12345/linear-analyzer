@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linear Analyzer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+
+    .container { max-width: 960px; margin: 0 auto; }
+
+    header { margin-bottom: 28px; }
+
+    header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.3px;
+    }
+
+    header p {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .filters {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .filter-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-right: 4px;
+    }
+
+    .label-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: opacity 0.15s;
+      user-select: none;
+    }
+
+    .label-chip.inactive { opacity: 0.3; }
+
+    .label-chip .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .summary-bar {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 12px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .summary-stat { display: flex; flex-direction: column; gap: 2px; }
+
+    .summary-stat .num {
+      font-size: 22px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .summary-stat .lbl {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .teams-grid { display: flex; flex-direction: column; gap: 24px; }
+
+    .team-section h2 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .team-section h2 .count {
+      font-size: 11px;
+      background: #2d3148;
+      color: #64748b;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .issues-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .issue-row {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.15s;
+    }
+
+    .issue-row:hover { border-color: #3d4268; }
+
+    .issue-label-dots { display: flex; gap: 5px; flex-shrink: 0; }
+
+    .issue-label-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .issue-title {
+      flex: 1;
+      font-size: 14px;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .issue-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .issue-state {
+      font-size: 11px;
+      color: #64748b;
+      background: #0f1117;
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid #2d3148;
+    }
+
+    .issue-date { font-size: 12px; color: #475569; }
+
+    .issue-link {
+      font-size: 12px;
+      color: #5e6ad2;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .issue-link:hover { color: #818cf8; text-decoration: underline; }
+
+
+    .empty {
+      text-align: center;
+      color: #475569;
+      font-size: 14px;
+      padding: 48px 0;
+    }
+
+    .api-bar {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .api-bar label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .api-bar input {
+      flex: 1;
+      min-width: 200px;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 13px;
+      padding: 6px 10px;
+      outline: none;
+    }
+
+    .api-bar input:focus { border-color: #5e6ad2; }
+
+    .api-bar button {
+      background: #5e6ad2;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 16px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .api-bar button:hover { background: #818cf8; }
+    .api-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .api-status {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .api-status.error { color: #f87171; }
+    .api-status.ok { color: #4ade80; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Linear Analyzer</h1>
+    <p>Completed issues · last 14 days · all teams · fetched Mar 16, 2026</p>
+  </header>
+
+  <div class="api-bar">
+    <label for="apiKeyInput">API Key</label>
+    <input id="apiKeyInput" type="password" placeholder="lin_api_..." autocomplete="off" />
+    <button id="fetchBtn" onclick="fetchFromLinear()">Fetch Latest</button>
+    <span class="api-status" id="apiStatus"></span>
+  </div>
+
+  <div class="filters" id="filtersBar"></div>
+  <div class="summary-bar" id="summaryBar"></div>
+  <div class="teams-grid" id="results"></div>
+</div>
+
+<script>
+const LABEL_COLORS = {
+  Feature:      "#BB87FC",
+  Improvement:  "#4EA7FC",
+  Integrations: "#bec2c8",
+  Libraries:    "#eb5757",
+  Review:       "#5e6ad2",
+  Streak:       "#f2c94c",
+};
+
+const TARGET_LABELS = Object.keys(LABEL_COLORS);
+
+// ISSUES_DATA_START
+const ISSUES = [
+  // Improvement — Android App
+  { id: "AND-409", title: "Streak display in offline", url: "https://linear.app/lingq/issue/AND-409/streak-display-in-offline", completedAt: "2026-03-09T14:50:25.964Z", team: "Android App", labels: ["Improvement"], state: "In QA" },
+  { id: "AND-402", title: "Inform Plus users when they exceed the audio transcription limit", url: "https://linear.app/lingq/issue/AND-402/inform-plus-users-when-they-exceed-the-audio-transcription-limit", completedAt: "2026-03-06T19:10:18.202Z", team: "Android App", labels: ["Improvement"], state: "In QA" },
+  { id: "AND-152", title: "Review compose conversion", url: "https://linear.app/lingq/issue/AND-152/review-compose-conversion", completedAt: "2026-03-06T19:12:08.571Z", team: "Android App", labels: ["Improvement"], state: "Ready for QA" },
+  // Improvement — Web App
+  { id: "WEB-2028", title: "Word-split new chunks of text added to lessons", url: "https://linear.app/lingq/issue/WEB-2028/word-split-new-chunks-of-text-added-to-lessons", completedAt: "2026-03-05T16:08:31.791Z", team: "Web App", labels: ["Improvement"], state: "Completed" },
+  // Integrations — Web App
+  { id: "WEB-1903", title: "Send LingQ API documentation and sample code to Michael at Skritter", url: "https://linear.app/lingq/issue/WEB-1903/send-lingq-api-documentation-and-sample-code-to-michael-at-skritter", completedAt: "2026-03-02T12:55:15.377Z", team: "Web App", labels: ["Integrations"], state: "Completed" },
+  // Streak — Web App
+  { id: "WEB-1215", title: "Add dates to APIs that affect streak in order to support offline mode", url: "https://linear.app/lingq/issue/WEB-1215/add-dates-to-apis-that-affect-streak-in-order-to-support-offline-mode", completedAt: "2026-03-09T17:46:33.964Z", team: "Web App", labels: ["Streak"], state: "Completed" },
+  // Libraries — Content
+  { id: "CON-133", title: "Weekly Content Review of each Library", url: "https://linear.app/lingq/issue/CON-133/weekly-content-review-of-each-library", completedAt: "2026-03-13T11:46:19.377Z", team: "Content", labels: ["Libraries"], state: "Done" },
+  { id: "CON-131", title: "Weekly Content Review of each Library", url: "https://linear.app/lingq/issue/CON-131/weekly-content-review-of-each-library", completedAt: "2026-03-06T20:27:26.946Z", team: "Content", labels: ["Libraries"], state: "Done" },
+];
+
+const GQL_QUERY = `
+query($since: DateTimeOrDuration!, $labels: [String!]!) {
+  issues(
+    first: 250
+    filter: {
+      completedAt: { gt: $since }
+      labels: { name: { in: $labels } }
+    }
+    orderBy: updatedAt
+  ) {
+    nodes {
+      identifier title url completedAt
+      state { name }
+      team { name }
+      labels { nodes { name } }
+    }
+  }
+}`;
+
+// Load saved key
+const savedKey = localStorage.getItem("linearApiKey") || "";
+document.getElementById("apiKeyInput").value = savedKey;
+
+async function fetchFromLinear() {
+  const key = document.getElementById("apiKeyInput").value.trim();
+  if (!key) { setStatus("Paste your API key first.", "error"); return; }
+  localStorage.setItem("linearApiKey", key);
+
+  const btn = document.getElementById("fetchBtn");
+  btn.disabled = true;
+  btn.textContent = "Fetching…";
+  setStatus("");
+
+  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  try {
+    const res = await fetch("https://api.linear.app/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": key },
+      body: JSON.stringify({ query: GQL_QUERY, variables: { since, labels: TARGET_LABELS } })
+    });
+    const data = await res.json();
+    if (data.errors) throw new Error(data.errors[0].message);
+
+    ISSUES.length = 0;
+    data.data.issues.nodes.forEach(n => ISSUES.push({
+      id: n.identifier, title: n.title, url: n.url,
+      completedAt: n.completedAt,
+      team: (n.team || {}).name || "Unknown",
+      labels: n.labels.nodes.map(l => l.name),
+      state: (n.state || {}).name || "",
+    }));
+
+    const now = new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+    document.querySelector("header p").textContent = `Completed issues · last 14 days · all teams · fetched ${now}`;
+    setStatus(`${ISSUES.length} issues loaded`, "ok");
+    render();
+  } catch (e) {
+    setStatus("Error: " + e.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Fetch Latest";
+  }
+}
+
+function setStatus(msg, type = "") {
+  const el = document.getElementById("apiStatus");
+  el.textContent = msg;
+  el.className = "api-status" + (type ? " " + type : "");
+}
+
+let activeLabels = new Set(TARGET_LABELS);
+
+// ── Build filter chips ────────────────────────────────────────────────────────
+const filtersBar = document.getElementById("filtersBar");
+const labelSpan = document.createElement("span");
+labelSpan.className = "filter-label";
+labelSpan.textContent = "Labels";
+filtersBar.appendChild(labelSpan);
+
+TARGET_LABELS.forEach(label => {
+  const chip = document.createElement("span");
+  chip.className = "label-chip";
+  chip.dataset.label = label;
+  chip.innerHTML = `<span class="dot" style="background:${LABEL_COLORS[label]}"></span>${label}`;
+  chip.style.background = LABEL_COLORS[label] + "22";
+  chip.style.color = LABEL_COLORS[label];
+  chip.style.borderColor = LABEL_COLORS[label] + "55";
+  chip.onclick = () => {
+    activeLabels.has(label) ? activeLabels.delete(label) : activeLabels.add(label);
+    chip.classList.toggle("inactive", !activeLabels.has(label));
+    render();
+  };
+  filtersBar.appendChild(chip);
+});
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const filtered = ISSUES.filter(i => i.labels.some(l => activeLabels.has(l)));
+
+  // Summary
+  const totalByLabel = {};
+  TARGET_LABELS.forEach(l => { totalByLabel[l] = 0; });
+  filtered.forEach(i => i.labels.forEach(l => { if (totalByLabel[l] !== undefined) totalByLabel[l]++; }));
+
+  const summaryBar = document.getElementById("summaryBar");
+  summaryBar.innerHTML = `
+    <div class="summary-stat"><span class="num">${filtered.length}</span><span class="lbl">Total Issues</span></div>`;
+  TARGET_LABELS.filter(l => activeLabels.has(l) && totalByLabel[l] > 0).forEach(l => {
+    summaryBar.innerHTML += `<div class="summary-stat"><span class="num" style="color:${LABEL_COLORS[l]}">${totalByLabel[l]}</span><span class="lbl">${l}</span></div>`;
+  });
+
+  // Group by team
+  const teams = {};
+  filtered.forEach(i => {
+    if (!teams[i.team]) teams[i.team] = [];
+    teams[i.team].push(i);
+  });
+
+  const results = document.getElementById("results");
+
+  if (filtered.length === 0) {
+    results.innerHTML = '<div class="empty">No issues match the selected filters.</div>';
+    return;
+  }
+
+  const sortedTeams = Object.entries(teams).sort((a, b) => b[1].length - a[1].length);
+  results.innerHTML = "";
+
+  sortedTeams.forEach(([teamName, issues]) => {
+    issues.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+    const section = document.createElement("div");
+    section.className = "team-section";
+
+    const rows = issues.map(issue => {
+      const date = new Date(issue.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const dots = issue.labels
+        .filter(l => LABEL_COLORS[l])
+        .map(l => `<span class="issue-label-dot" style="background:${LABEL_COLORS[l]}" title="${esc(l)}"></span>`)
+        .join("");
+      return `
+        <div class="issue-row">
+          <div class="issue-label-dots">${dots}</div>
+          <span class="issue-title" title="${esc(issue.title)}">${esc(issue.title)}</span>
+          <div class="issue-meta">
+            <span class="issue-state">${esc(issue.state)}</span>
+            <span class="issue-date">${date}</span>
+            <a class="issue-link" href="${esc(issue.url)}" target="_blank" rel="noopener">Open ↗</a>
+          </div>
+        </div>`;
+    }).join("");
+
+    section.innerHTML = `
+      <h2>${esc(teamName)} <span class="count">${issues.length}</span></h2>
+      <div class="issues-list">${rows}</div>`;
+    results.appendChild(section);
+  });
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+render();
+</script>
+</body>
+</html>
